@@ -6582,6 +6582,8 @@ if ('serviceWorker' in navigator){
         const hit = sl.filter((l) => window.matchMedia(l.media).matches).map((l) => l.getAttribute('href').split('/').pop());
         lines.push('apple-touch-startup-image: всего ' + sl.length + ', подходит устройству: ' + (hit.length ? hit.join(', ') : 'НИ ОДИН (iOS покажет белый экран)'));
       } catch(e){ lines.push('startup-image: ошибка проверки ' + e.message); }
+      // с какого адреса и откуда пришла эта страница (иконка на экране Домой могла быть добавлена по старому адресу /COUNTER-CHAT/)
+      try { lines.push('адрес: ' + location.href + ', referrer: ' + (document.referrer || 'пусто') + ', history.length=' + history.length); } catch(e){}
       // тайминги запуска: сколько прошло от начала навигации до ответа воркера/сети и до первой отрисовки
       try {
         const nv = performance.getEntriesByType('navigation')[0];
