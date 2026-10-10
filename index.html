@@ -6574,6 +6574,14 @@ if ('serviceWorker' in navigator){
       } else {
         lines.push('getRegistration() вернул null — регистрации вообще нет');
       }
+      // загрузочный экран iOS: какие размеры у устройства и какой из apple-touch-startup-image подходит.
+      // iOS показывает белый экран, если ни один media-запрос не совпал с устройством точно
+      try {
+        lines.push('экран: ' + screen.width + 'x' + screen.height + ', окно ' + innerWidth + 'x' + innerHeight + ', pixelRatio ' + devicePixelRatio);
+        const sl = [...document.querySelectorAll('link[rel="apple-touch-startup-image"]')];
+        const hit = sl.filter((l) => window.matchMedia(l.media).matches).map((l) => l.getAttribute('href').split('/').pop());
+        lines.push('apple-touch-startup-image: всего ' + sl.length + ', подходит устройству: ' + (hit.length ? hit.join(', ') : 'НИ ОДИН (iOS покажет белый экран)'));
+      } catch(e){ lines.push('startup-image: ошибка проверки ' + e.message); }
       try { const ul = JSON.parse(localStorage.getItem('cc_upd_log') || '[]'); lines.push('журнал обновлений (последние): ' + (ul.length ? ul.join(' | ') : 'пусто')); } catch(e){}
       try { const tl = JSON.parse(localStorage.getItem('cc_tts_log') || '[]'); lines.push('журнал озвучки (последние): ' + (tl.length ? tl.join(' | ') : 'пусто')); } catch(e){}
       try { lines.push('голоса en: ' + englishVoices().map((v) => v.name + ' [' + (v.localService ? 'лок' : 'сеть') + ']').join(', ')); } catch(e){}
