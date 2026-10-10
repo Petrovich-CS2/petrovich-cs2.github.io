@@ -6582,6 +6582,15 @@ if ('serviceWorker' in navigator){
         const hit = sl.filter((l) => window.matchMedia(l.media).matches).map((l) => l.getAttribute('href').split('/').pop());
         lines.push('apple-touch-startup-image: всего ' + sl.length + ', подходит устройству: ' + (hit.length ? hit.join(', ') : 'НИ ОДИН (iOS покажет белый экран)'));
       } catch(e){ lines.push('startup-image: ошибка проверки ' + e.message); }
+      // тайминги запуска: сколько прошло от начала навигации до ответа воркера/сети и до первой отрисовки
+      try {
+        const nv = performance.getEntriesByType('navigation')[0];
+        const r = (x) => Math.round(x);
+        if (nv) lines.push('запуск: тип=' + nv.type + ', workerStart=' + r(nv.workerStart) + ' мс, responseStart=' + r(nv.responseStart) + ' мс, responseEnd=' + r(nv.responseEnd) +
+                           ' мс, DOMContentLoaded=' + r(nv.domContentLoadedEventEnd) + ' мс, load=' + r(nv.loadEventEnd) + ' мс, размер=' + nv.transferSize + ' Б');
+        const pt = performance.getEntriesByType('paint').map((e) => e.name + '=' + r(e.startTime) + ' мс').join(', ');
+        lines.push('отрисовка: ' + (pt || 'нет данных'));
+      } catch(e){ lines.push('тайминги запуска: ошибка ' + e.message); }
       try { const ul = JSON.parse(localStorage.getItem('cc_upd_log') || '[]'); lines.push('журнал обновлений (последние): ' + (ul.length ? ul.join(' | ') : 'пусто')); } catch(e){}
       try { const tl = JSON.parse(localStorage.getItem('cc_tts_log') || '[]'); lines.push('журнал озвучки (последние): ' + (tl.length ? tl.join(' | ') : 'пусто')); } catch(e){}
       try { lines.push('голоса en: ' + englishVoices().map((v) => v.name + ' [' + (v.localService ? 'лок' : 'сеть') + ']').join(', ')); } catch(e){}
