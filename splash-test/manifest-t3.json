@@ -1,0 +1,25 @@
+{
+  "name": "T3 манифест id",
+  "short_name": "T3 манифест id",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#05070a",
+  "theme_color": "#05070a",
+  "scope": "./",
+  "icons": [
+    {
+      "src": "/assets/icons/icon-android-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icons/icon-android-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "start_url": "./t3.html",
+  "id": "/"
+}
