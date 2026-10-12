@@ -56,6 +56,16 @@ const CACHE_NAME = `counter-chat-${CACHE_VERSION}`;
    под тем же именем — увеличь число в IMG_CACHE (v1 -> v2), иначе у пользователей
    останется старая версия. */
 const IMG_CACHE = 'counter-chat-img-v1';
+
+/* Шрифты Google тоже в отдельном постоянном кэше. Раньше они попадали в CACHE_NAME,
+   который удаляется при каждой публикации, — и первый запуск после обновления
+   снова ждал fonts.googleapis.com по сети. */
+const FONT_CACHE = 'counter-chat-fonts-v1';
+const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
+
+/* Сколько ждать сеть при открытии страницы, если в кэше уже есть копия.
+   Дольше — отдаём кэш, чтобы при слабой сети не было белого экрана. */
+const NAV_TIMEOUT_MS = 2500;
 const IMG_PATH_RE = /\/assets\/(categories|maps|ui)\//;
 const IMG_SHELL = [
   './assets/categories/all_chat.webp',
@@ -145,7 +155,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
-        keys.filter((k) => k !== CACHE_NAME && k !== IMG_CACHE).map((k) => caches.delete(k))
+        keys.filter((k) => k !== CACHE_NAME && k !== IMG_CACHE && k !== FONT_CACHE).map((k) => caches.delete(k))
       ))
       .then(() => self.clients.claim())
       .then(() => self.clients.matchAll({ includeUncontrolled: true, type: 'window' }))
@@ -228,14 +238,41 @@ self.addEventListener('fetch', (event) => {
     // от нашего Cache API, который очищается кнопкой "Очистить кэш" и даже
     // через удаление данных сайта), из-за чего "свежий" запрос на самом деле
     // не доходил до сервера и отдавал устаревшее содержимое
-    respondTracked(event,
-      fetch(req, { cache: 'no-store' })
-        .then((res) => {
+    // сеть в приоритете, но не дольше NAV_TIMEOUT_MS, если в кэше есть копия:
+    // при медленной сети ждать её отказа можно очень долго — всё это время экран белый.
+    // Запрос в сеть продолжается и в этом случае и обновляет кэш на следующий запуск.
+    const network = fetch(req, { cache: 'no-store' })
+      .then((res) => {
+        if (res && res.ok){
           const copy = res.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+        }
+        return res;
+      });
+    const fromCache = () => caches.match(req).then((cached) => cached || (isHTML ? caches.match('./index.html') : undefined));
+    respondTracked(event, fromCache().then((cached) => {
+      if (!cached) return network.catch(() => fromCache());
+      return new Promise((resolve) => {
+        const timer = setTimeout(() => resolve(cached), NAV_TIMEOUT_MS);
+        network.then((res) => { clearTimeout(timer); resolve(res); },
+                     () => { clearTimeout(timer); resolve(cached); });
+      });
+    }));
+    return;
+  }
+
+  // шрифты Google — только кэш (постоянный FONT_CACHE), в сеть лишь если ещё нет
+  let host = '';
+  try { host = new URL(req.url).hostname; } catch(e){}
+  if (FONT_HOSTS.includes(host)){
+    respondTracked(event,
+      caches.open(FONT_CACHE).then((cache) => cache.match(req).then((cached) => {
+        if (cached) return cached;
+        return fetch(req).then((res) => {
+          if (res.ok || res.type === 'opaque') cache.put(req, res.clone());
           return res;
-        })
-        .catch(() => caches.match(req).then((cached) => cached || (isHTML ? caches.match('./index.html') : undefined)))
+        });
+      }))
     );
     return;
   }
