@@ -44,7 +44,7 @@ try {
   что новый sw.js "такой же", и не обновит закэшированные файлы вовремя.
 */
 /* НЕ РЕДАКТИРУЙ ВРУЧНУЮ: __BUILD_VERSION__ подставляется автоматически
-   GitHub Action-ом при каждой публикации (см. .github/workflows/deploy.yml) */
+   GitHub Action-ом при каждой публикации (см. .github/workflows/deploy.yaml) */
 const CACHE_VERSION = '__BUILD_VERSION__';
 const CACHE_NAME = `counter-chat-${CACHE_VERSION}`;
 
@@ -65,7 +65,7 @@ const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 
 /* Сколько ждать сеть при открытии страницы, если в кэше уже есть копия.
    Дольше — отдаём кэш, чтобы при слабой сети не было белого экрана. */
-const NAV_TIMEOUT_MS = 2500;
+const NAV_TIMEOUT_MS = 800;
 const IMG_PATH_RE = /\/assets\/(categories|maps|ui)\//;
 const IMG_SHELL = [
   './assets/categories/all_chat.webp',
@@ -250,8 +250,14 @@ self.addEventListener('fetch', (event) => {
         return res;
       });
     const fromCache = () => caches.match(req).then((cached) => cached || (isHTML ? caches.match('./index.html') : undefined));
+    // перезагрузка после нажатия «Обновить» идёт с ?r=<время>: тут нужна именно свежая страница,
+    // поэтому таймаут не применяем
+    const forceFresh = /[?&]r=\d+/.test(req.url);
+    // не даём воркеру завершиться, пока фоновый запрос обновляет кэш; но не дольше 10 с, чтобы
+    // зависший запрос не откладывал активацию нового воркера
+    event.waitUntil(Promise.race([network.catch(() => {}), new Promise((r) => setTimeout(r, 10000))]));
     respondTracked(event, fromCache().then((cached) => {
-      if (!cached) return network.catch(() => fromCache());
+      if (!cached || forceFresh) return network.catch(() => fromCache());
       return new Promise((resolve) => {
         const timer = setTimeout(() => resolve(cached), NAV_TIMEOUT_MS);
         network.then((res) => { clearTimeout(timer); resolve(res); },
@@ -261,17 +267,22 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // шрифты Google — только кэш (постоянный FONT_CACHE), в сеть лишь если ещё нет
+  // шрифты Google — только кэш (постоянный FONT_CACHE), в сеть лишь если ещё нет.
+  // В кэш кладём только успешные (res.ok) ответы. Файл стилей запрашивается без CORS и пришёл бы
+  // «закрытым» (opaque): по нему нельзя отличить ошибку от успеха, и ошибка осталась бы в кэше
+  // навсегда. Поэтому запрашиваем его сами с mode:'cors'; если Google не отдаёт CORS-заголовки,
+  // идём обычным путём и в кэш ничего не кладём
   let host = '';
   try { host = new URL(req.url).hostname; } catch(e){}
   if (FONT_HOSTS.includes(host)){
     respondTracked(event,
-      caches.open(FONT_CACHE).then((cache) => cache.match(req).then((cached) => {
+      caches.open(FONT_CACHE).then((cache) => cache.match(req.url).then((cached) => {
         if (cached) return cached;
-        return fetch(req).then((res) => {
-          if (res.ok || res.type === 'opaque') cache.put(req, res.clone());
+        return fetch(req.url, { mode: 'cors', credentials: 'omit' }).then((res) => {
+          if (!res.ok) throw new Error('fonts ' + res.status);
+          cache.put(req.url, res.clone());
           return res;
-        });
+        }).catch(() => fetch(req));
       }))
     );
     return;
