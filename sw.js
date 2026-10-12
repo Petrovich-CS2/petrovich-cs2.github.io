@@ -66,6 +66,9 @@ const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 /* Сколько ждать сеть при открытии страницы, если в кэше уже есть копия.
    Дольше — отдаём кэш, чтобы при слабой сети не было белого экрана. */
 const NAV_TIMEOUT_MS = 800;
+/* единый адрес, под которым в кэше лежит страница приложения (запросы вида /, /index.html,
+   /index.html?r=…, /?import=… — это одна и та же страница, скрипт читает параметры сам) */
+const INDEX_URL = new URL('./index.html', self.registration.scope).href;
 const IMG_PATH_RE = /\/assets\/(categories|maps|ui)\//;
 const IMG_SHELL = [
   './assets/categories/all_chat.webp',
@@ -127,8 +130,6 @@ const IOS_SPLASH = [
 const IS_IOS = /iPhone|iPad|iPod/i.test((self.navigator && self.navigator.userAgent) || '');
 
 const APP_SHELL = [
-  './',
-  './index.html',
   './manifest.json',
   './assets/icons/icon-192.png',
   './assets/icons/icon-android-192.png',
@@ -138,9 +139,12 @@ const APP_SHELL = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(Promise.all([
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(IS_IOS ? APP_SHELL.concat(IOS_SPLASH) : APP_SHELL))
-      .catch(() => {}), // не роняем установку, если какой-то файл не нашёлся
+    caches.open(CACHE_NAME).then((cache) => Promise.all([
+      cache.addAll(IS_IOS ? APP_SHELL.concat(IOS_SPLASH) : APP_SHELL).catch(() => {}), // не роняем установку, если какой-то файл не нашёлся
+      // страница кладётся в кэш новой версии в обход HTTP-кэша браузера (cache:'reload'), чтобы сразу после
+      // обновления воркера из кэша отдавалась именно свежая страница, а не копия до 10 минут давности
+      fetch(INDEX_URL, { cache: 'reload' }).then((res) => { if (res && res.ok) return cache.put(INDEX_URL, res); }).catch(() => {}),
+    ])).catch(() => {}),
     // картинки докачиваем по одной и только те, которых ещё нет в кэше картинок;
     // сбой одного файла не мешает остальным
     caches.open(IMG_CACHE).then((cache) => Promise.allSettled(IMG_SHELL.map(async (url) => {
@@ -231,16 +235,39 @@ self.addEventListener('fetch', (event) => {
   const isHTML = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
   const isChangelog = req.url.includes('changelog.json');
 
-  if (isHTML || isChangelog) {
-    // сеть в приоритете — свежий контент при каждом открытии с интернетом.
-    // ВАЖНО: cache:'no-store' обязателен — без него fetch() может тихо
-    // вернуть ответ из встроенного HTTP-кэша браузера (полностью отдельного
-    // от нашего Cache API, который очищается кнопкой "Очистить кэш" и даже
-    // через удаление данных сайта), из-за чего "свежий" запрос на самом деле
-    // не доходил до сервера и отдавал устаревшее содержимое
-    // сеть в приоритете, но не дольше NAV_TIMEOUT_MS, если в кэше есть копия:
-    // при медленной сети ждать её отказа можно очень долго — всё это время экран белый.
-    // Запрос в сеть продолжается и в этом случае и обновляет кэш на следующий запуск.
+  if (isHTML) {
+    // СТРАНИЦА: «кэш сразу, обновление в фоне». Белый экран при запуске длится ровно столько, сколько
+    // страница не доходит до первой отрисовки, а раньше она всегда ждала ответа сети (по замерам с iPhone
+    // первая отрисовка наступала сразу после конца ответа сервера). Теперь копия из кэша отдаётся мгновенно,
+    // а свежая версия скачивается в фоне и ложится в кэш к следующему запуску.
+    // ВАЖНО: cache:'no-store' обязателен — без него fetch() может тихо вернуть ответ из встроенного
+    // HTTP-кэша браузера (отдельного от Cache API), и «свежий» запрос не дойдёт до сервера.
+    // Новая версия приложения всё равно доходит до пользователя штатно: браузер сам находит новый sw.js,
+    // воркер при установке кладёт в свой кэш свежую страницу, а кнопка «Обновить» перезагружает приложение.
+    const refresh = () => fetch(INDEX_URL, { cache: 'no-store' }).then((res) => {
+      if (res && res.ok){
+        const copy = res.clone();
+        return caches.open(CACHE_NAME).then((cache) => cache.put(INDEX_URL, copy)).then(() => res, () => res);
+      }
+      return res;
+    });
+    const lookup = () => caches.open(CACHE_NAME).then((cache) => cache.match(INDEX_URL))
+      .then((hit) => hit || caches.match(INDEX_URL));
+    // перезагрузка после нажатия «Обновить» идёт с ?r=<время>: тут нужна именно свежая страница
+    const forceFresh = /[?&]r=\d+/.test(req.url);
+    respondTracked(event, lookup().then((cached) => {
+      if (cached && !forceFresh){
+        // фоновое обновление; не дольше 10 с, чтобы зависший запрос не откладывал активацию нового воркера
+        event.waitUntil(Promise.race([refresh().catch(() => {}), new Promise((r) => setTimeout(r, 10000))]));
+        return cached;
+      }
+      return refresh().catch(() => cached || lookup());
+    }));
+    return;
+  }
+
+  if (isChangelog) {
+    // changelog.json: сеть в приоритете, но не дольше NAV_TIMEOUT_MS, если в кэше есть копия
     const network = fetch(req, { cache: 'no-store' })
       .then((res) => {
         if (res && res.ok){
@@ -249,15 +276,10 @@ self.addEventListener('fetch', (event) => {
         }
         return res;
       });
-    const fromCache = () => caches.match(req).then((cached) => cached || (isHTML ? caches.match('./index.html') : undefined));
-    // перезагрузка после нажатия «Обновить» идёт с ?r=<время>: тут нужна именно свежая страница,
-    // поэтому таймаут не применяем
-    const forceFresh = /[?&]r=\d+/.test(req.url);
-    // не даём воркеру завершиться, пока фоновый запрос обновляет кэш; но не дольше 10 с, чтобы
-    // зависший запрос не откладывал активацию нового воркера
+    const fromCache = () => caches.match(req);
     event.waitUntil(Promise.race([network.catch(() => {}), new Promise((r) => setTimeout(r, 10000))]));
     respondTracked(event, fromCache().then((cached) => {
-      if (!cached || forceFresh) return network.catch(() => fromCache());
+      if (!cached) return network.catch(() => fromCache());
       return new Promise((resolve) => {
         const timer = setTimeout(() => resolve(cached), NAV_TIMEOUT_MS);
         network.then((res) => { clearTimeout(timer); resolve(res); },
