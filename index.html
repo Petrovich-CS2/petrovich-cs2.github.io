@@ -1483,6 +1483,14 @@ body.text-size-sm .phrase-ru{font-size:clamp(10.5px, 2.93vw, 13.2px);}
   background:rgba(9,11,14,.9);
 }
 
+.level-switch{display:flex; gap:8px; margin-bottom:10px;}
+.level-btn{
+  flex:1; font-family:var(--font-mono); font-size:12px; font-weight:600;
+  padding:8px 10px; border-radius:12px;
+  background:var(--bg-surface); border:1px solid var(--line); color:var(--text-muted);
+  cursor:pointer; transition:all .15s ease;
+}
+.level-btn.active{ background:linear-gradient(140deg, var(--t-orange), #a9631d); color:#1a1006; border-color:transparent; }
 .legend{display:flex; gap:14px; margin-bottom:10px;}
 .legend-item{display:flex; align-items:center; gap:5px; font-size:10.5px; color:var(--text-muted); font-family:var(--font-mono);}
 .legend-dot{width:8px; height:8px; border-radius:50%;}
@@ -2106,6 +2114,7 @@ body:has(.update-banner:not([hidden])) .app-header{
         <div class="legend-item"><span class="legend-dot" style="background:var(--site-b)"></span>Сайт B</div>
         <div class="legend-item"><span class="legend-dot" style="background:#7b828c"></span>Нейтрально</div>
       </div>
+      <div class="level-switch" id="levelSwitch" hidden></div>
       <div class="schematic" id="schematic"></div>
     </div>
 
@@ -3444,28 +3453,69 @@ const maps = {
     {n:"Скамейка", en:"Bench", x:51,y:64.5,z:"n", d:"Скамейка, ориентир по центру карты"},
   ], edges:[
   ]},
-  "Nuke": { points:[
-    {n:"Т-спавн", en:"T spawn", x:50,y:92,z:"n", d:"Стартовая точка террористов"},
-    {n:"Улица", en:"Outside", x:35,y:76,z:"n", d:"Открытое пространство между T-спавном и CT-спавном"},
-    {n:"Ангар", en:"Garage", x:22,y:66,z:"n", d:"Большой ангар рядом с CT-спавном"},
-    {n:"Силос", en:"Silo", x:24,y:50,z:"a", d:"Верхняя часть цилиндрического контейнера рядом с точкой A"},
-    {n:"Мэйн", en:"Main", x:32,y:32,z:"a", d:"Основной вход на точку A"},
-    {n:"Скрип", en:"Squeaky", x:44,y:38,z:"n", d:"Узкое пространство перед дверью на точку A (Squeaky)"},
-    {n:"Плент A", en:"Plant A", x:30,y:16,z:"a", d:"Точка установки бомбы A"},
-    {n:"Хэвен", en:"Heaven", x:18,y:10,z:"a", d:"Верхний этаж у точки A"},
-    {n:"Синий", en:"Blue", x:34,y:8,z:"a", d:"Синий ящик в углу у точки A"},
-    {n:"Вент", en:"Vent", x:46,y:26,z:"n", d:"Вентиляция, соединяющая точки A и B"},
-    {n:"Лобби", en:"Fork", x:56,y:44,z:"n", d:"Комната с несколькими проходами на оба плента (Fork)"},
-    {n:"Секрет", en:"Secret", x:60,y:56,z:"n", d:"Спуск в сторону точки B (Metro)"},
-    {n:"Рампа", en:"Ramp", x:64,y:68,z:"n", d:"Спуск к точке B"},
-    {n:"Плент B", en:"Plant B", x:66,y:80,z:"b", d:"Точка установки бомбы B (нижний этаж)"},
-    {n:"Тёмная", en:"Shadow", x:78,y:74,z:"b", d:"Угол у точки B (Shadow)"},
-    {n:"Будка", en:"Hut", x:76,y:88,z:"b", d:"Закрытое пространство с выходом на точку A"},
-    {n:"Спавн CT", en:"CT spawn", x:45,y:9,z:"n", d:"Стартовая точка контр-террористов"},
+  "Nuke": { aspect:"978/547", bg:"assets/maps/nuke.webp", levels:[
+    {id:"u", label:"Верхний этаж", bg:"assets/maps/nuke.webp"},
+    {id:"l", label:"Нижний этаж", bg:"assets/maps/nuke-lower.webp"},
+  ], points:[
+    {n:"А1", en:"A1", x:60.1,y:46.4, z:"a", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"А2", en:"A2", x:53.7,y:47.5, z:"a", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Аквариум", en:"Aquarium", x:65.2,y:42.1, z:"n", lvl:"l", d:"Позиция на нижнем этаже карты Nuke"},
+    {n:"Ангар", en:"Garage", x:72.8,y:79.7, z:"n", lvl:"u", d:"Большой склад на CT-стороне Улицы"},
+    {n:"Белый", en:"White", x:66.3,y:69.4, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Ближний", en:"Near", x:62.9,y:61.6, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Бойлер", en:"Boiler", x:68.0,y:76.9, z:"n", lvl:"l", d:"Позиция на нижнем этаже карты Nuke"},
+    {n:"Будка", en:"Hut", x:52.5,y:56.0, z:"n", lvl:"u", d:"Металлическая будка, соединяющая Лобби с сайтом A"},
+    {n:"Буст", en:"Boost", x:52.8,y:32.7, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Вент", en:"Vents", x:53.2,y:67.0, z:"n", lvl:"u", d:"Система вентиляции, соединяющая сайт A, Секрет и сайт B"},
+    {n:"Вилка", en:"Fork", x:55.9,y:27.3, z:"n", lvl:"l", d:"Позиция на нижнем этаже карты Nuke"},
+    {n:"Глубоко ангар", en:"Deep garage", x:71.5,y:87.6, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Голова", en:"Head", x:50.2,y:81.8, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Дальний", en:"Far", x:55.1,y:8.8, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Двадцать", en:"Twenty", x:55.7,y:29.7, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Двойные", en:"Double doors", x:62.0,y:55.0, z:"n", lvl:"l", d:"Позиция на нижнем этаже карты Nuke"},
+    {n:"Девятка", en:"Nine", x:62.1,y:39.5, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Дефолт А", en:"Default A", x:57.0,y:48.7, z:"a", lvl:"u", d:"Стандартная точка установки бомбы на сайте A"},
+    {n:"Дефолт Б", en:"Default B", x:56.1,y:61.9, z:"b", lvl:"l", d:"Стандартная точка установки бомбы на сайте B"},
+    {n:"Длинный", en:"Long", x:63.3,y:68.3, z:"n", lvl:"l", d:"Позиция на нижнем этаже карты Nuke"},
+    {n:"Единица", en:"One", x:49.1,y:29.7, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"За белым", en:"Behind white", x:67.9,y:66.8, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"За синим", en:"Behind blue", x:51.6,y:38.4, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Икс", en:"X", x:54.4,y:22.8, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Короткий", en:"Short", x:58.3,y:71.9, z:"n", lvl:"l", d:"Позиция на нижнем этаже карты Nuke"},
+    {n:"Красный", en:"Red", x:56.2,y:87.6, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"КТ спавн", en:"CT spawn", x:82.0,y:39.5, z:"n", lvl:"u", d:"Стартовая точка контр-террористов"},
+    {n:"КТ старт", en:"CT start", x:66.6,y:56.5, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Лобби", en:"Lobby", x:41.1,y:55.2, z:"n", lvl:"u", d:"Первая внутренняя комната от T-спавна"},
+    {n:"Мейн", en:"Main", x:56.5,y:73.0, z:"n", lvl:"u", d:"Широкий проход между сайтом A и Улицей"},
+    {n:"Мост", en:"Bridge", x:60.0,y:49.8, z:"n", lvl:"l", d:"Позиция на нижнем этаже карты Nuke"},
+    {n:"Ноль", en:"Zero", x:44.6,y:53.1, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Нычка", en:"Hiding spot", x:54.6,y:35.0, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Парапет", en:"Parapet", x:52.5,y:53.5, z:"n", lvl:"l", d:"Позиция на нижнем этаже карты Nuke"},
+    {n:"Площадь", en:"Square", x:36.6,y:57.1, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Под девяткой", en:"Under nine", x:64.7,y:41.0, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Подъем", en:"Climb", x:56.1,y:38.7, z:"n", lvl:"l", d:"Позиция на нижнем этаже карты Nuke"},
+    {n:"Радио", en:"Radio", x:44.7,y:42.9, z:"n", lvl:"u", d:"Комната между Лобби и Трофеями, с торговыми автоматами"},
+    {n:"Раздевалка", en:"Locker room", x:64.9,y:47.5, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Рампа", en:"Ramp", x:55.8,y:14.2, z:"n", lvl:"u", d:"Длинный спуск вниз к сайту B"},
+    {n:"Раскид", en:"Spread", x:27.6,y:61.2, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Скала", en:"Rock", x:47.8,y:72.6, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Сейв", en:"Save", x:95.4,y:50.9, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Сэндвич", en:"Sandwich", x:52.5,y:73.4, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Синий", en:"Blue", x:54.4,y:39.5, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Сингл", en:"Single", x:49.4,y:65.7, z:"n", lvl:"l", d:"Позиция на нижнем этаже карты Nuke"},
+    {n:"Сикрет", en:"Secret", x:66.7,y:87.8, z:"n", lvl:"u", d:"Лестница с Улицы вниз в туннели за сайтом B"},
+    {n:"Скрип", en:"Squeaky", x:47.8,y:63.1, z:"n", lvl:"u", d:"Комната с громко скрипящей дверью, выход на сайт A"},
+    {n:"Тетрис", en:"Tetris", x:54.7,y:59.9, z:"n", lvl:"u", d:"Ступенчатые ящики перед Будкой на сайте A"},
+    {n:"Темка", en:"Dark", x:59.0,y:39.7, z:"n", lvl:"l", d:"Позиция на нижнем этаже карты Nuke"},
+    {n:"Токсик", en:"Toxic", x:53.1,y:44.9, z:"n", lvl:"l", d:"Позиция на нижнем этаже карты Nuke"},
+    {n:"Т-крыша", en:"T roof", x:44.8,y:59.1, z:"n", lvl:"u", d:"Крыша над Лобби, на неё ведёт лестница у T-спавна"},
+    {n:"Т спавн", en:"T spawn", x:16.9,y:55.6, z:"n", lvl:"u", d:"Стартовая точка террористов"},
+    {n:"Трансформатор", en:"Transformer", x:65.7,y:51.5, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Угол", en:"Corner", x:51.5,y:65.7, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
+    {n:"Улица", en:"Outside", x:60.5,y:79.9, z:"n", lvl:"u", d:"Открытый двор вокруг здания"},
+    {n:"Часы", en:"Clock", x:58.5,y:63.4, z:"n", lvl:"l", d:"Позиция на нижнем этаже карты Nuke"},
+    {n:"Хелпа", en:"Helper", x:63.1,y:30.5, z:"n", lvl:"u", d:"Позиция на верхнем этаже карты Nuke"},
   ], edges:[
-    ["Т-спавн","Улица"],["Улица","Ангар"],["Улица","Силос"],["Силос","Мэйн"],["Мэйн","Скрип"],["Скрип","Плент A"],["Плент A","Хэвен"],["Плент A","Синий"],["Плент A","Вент"],
-    ["Т-спавн","Лобби"],["Лобби","Секрет"],["Секрет","Рампа"],["Рампа","Плент B"],["Плент B","Тёмная"],["Плент B","Будка"],["Вент","Плент B"],
-    ["Спавн CT","Плент A"],["Спавн CT","Плент B"],
   ]},
   "Overpass": { points:[
     {n:"Т-спавн", en:"T spawn", x:50,y:92,z:"n", d:"Стартовая точка террористов"},
@@ -5335,6 +5385,7 @@ const schematic = document.getElementById('schematic');
 const mapNameEl = document.getElementById('mapName');
 const infoPanel = document.getElementById('infoPanel');
 let currentMap = "Dust II";
+const currentLevels = {}; // выбранный этаж для карт с несколькими этажами: { "Nuke": "u" }
 
 function trackMapViewed(name){
   let viewed;
@@ -5417,6 +5468,25 @@ function seeded(str){
   return (h % 1000) / 1000;
 }
 
+function renderLevelSwitch(data, activeId){
+  const box = document.getElementById('levelSwitch');
+  if (!data.levels){ box.hidden = true; box.innerHTML = ''; return; }
+  box.hidden = false;
+  box.innerHTML = '';
+  data.levels.forEach(l => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'level-btn' + (l.id === activeId ? ' active' : '');
+    b.textContent = l.label;
+    b.addEventListener('click', () => {
+      if (currentLevels[currentMap] === l.id) return;
+      currentLevels[currentMap] = l.id;
+      renderSchematic();
+    });
+    box.appendChild(b);
+  });
+}
+
 function renderSchematic(){
   mapNameEl.textContent = currentMap;
   infoPanel.hidden = true;
@@ -5426,9 +5496,17 @@ function renderSchematic(){
   void schematic.offsetWidth;
   schematic.classList.add('switch-in');
 
-  const hasRealImage = !!data.bg;
+  // карты с несколькими этажами: показываем картинку и точки выбранного этажа
+  const lvlId = data.levels ? (currentLevels[currentMap] || data.levels[0].id) : null;
+  const lvl = data.levels ? data.levels.find(l => l.id === lvlId) : null;
+  const bgUrl = lvl ? lvl.bg : data.bg;
+  const levelPoints = lvl ? data.points.filter(p => p.lvl === lvlId) : data.points;
+  renderLevelSwitch(data, lvlId);
+
+  const hasRealImage = !!bgUrl;
   schematic.classList.toggle('schematic-real-bg', hasRealImage);
-  schematic.style.backgroundImage = hasRealImage ? `url('${data.bg}')` : '';
+  schematic.style.aspectRatio = (hasRealImage && data.aspect) ? data.aspect : '';
+  schematic.style.backgroundImage = hasRealImage ? `url('${bgUrl}')` : '';
 
   if (!hasRealImage){
     renderGrid(schematic);
@@ -5470,13 +5548,13 @@ function renderSchematic(){
 
   /* линии маршрутов — многослойная отрисовка (тёмная тень + пол коридора + смещённая подсветка края + цветная осевая линия) */
   /* пины */
-  data.points.forEach(pt => {
+  levelPoints.forEach(pt => {
     const pin = document.createElement('div');
     pin.className = 'pin';
     pin.style.left = pt.x + '%';
     pin.style.top = pt.y + '%';
-    const isTSpawn = pt.n === 'Спавн T' || pt.n === 'Т-спавн' || pt.n === 'Т-Спаун';
-    const isCTSpawn = pt.n === 'Спавн CT' || pt.n === 'КТ-Спаун' || pt.n === 'КТ-спавн';
+    const isTSpawn = pt.n === 'Спавн T' || pt.n === 'Т-спавн' || pt.n === 'Т-Спаун' || pt.n === 'Т спавн';
+    const isCTSpawn = pt.n === 'Спавн CT' || pt.n === 'КТ-Спаун' || pt.n === 'КТ-спавн' || pt.n === 'КТ спавн';
     const markerHTML = isTSpawn
       ? `<div class="pin-spawn pin-spawn-t">T</div>`
       : isCTSpawn
@@ -5636,7 +5714,11 @@ document.getElementById('mapZoomBtn').addEventListener('click', () => {
   zoomAnimId++; // отменяем возможную незавершённую анимацию прошлого открытия
   closeAllModals('mapZoomModal');
   mapZoomContent.innerHTML = schematic.outerHTML;
-  document.getElementById('mapZoomTitle').textContent = currentMap;
+  {
+    const dd = maps[currentMap];
+    const ll = dd.levels ? dd.levels.find(l => l.id === (currentLevels[currentMap] || dd.levels[0].id)) : null;
+    document.getElementById('mapZoomTitle').textContent = currentMap + (ll ? ' — ' + ll.label.toLowerCase() : '');
+  }
   zoomScale = 1.6; // сразу открываем с небольшим приближением, чтобы сразу было видно пользу
   applyZoomScale(zoomScale);
   mapZoomModal.hidden = false;

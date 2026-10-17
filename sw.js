@@ -105,6 +105,8 @@ const IMG_SHELL = [
   './assets/maps/dust2.webp',
   './assets/maps/inferno.webp',
   './assets/maps/mirage.webp',
+  './assets/maps/nuke.webp',
+  './assets/maps/nuke-lower.webp',
   './assets/ui/compact.webp',
   './assets/ui/lang-en.webp',
   './assets/ui/lang-ru.webp',
