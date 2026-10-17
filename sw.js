@@ -235,6 +235,16 @@ self.addEventListener('fetch', (event) => {
   const isHTML = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
   const isChangelog = req.url.includes('changelog.json');
 
+  // кэш-сразу работает ТОЛЬКО для самой страницы приложения (/ и /index.html). Любые другие HTML-страницы
+  // сайта (tools/…, 404.html, тестовые) воркер не трогает — их открывает браузер напрямую из сети,
+  // иначе вместо них показывалась бы страница приложения
+  let isAppPage = false;
+  try {
+    const pn = new URL(req.url).pathname, sp = new URL(self.registration.scope).pathname;
+    isAppPage = (pn === sp || pn === sp + 'index.html');
+  } catch(e){}
+  if (isHTML && !isAppPage) return;
+
   if (isHTML) {
     // СТРАНИЦА: «кэш сразу, обновление в фоне». Белый экран при запуске длится ровно столько, сколько
     // страница не доходит до первой отрисовки, а раньше она всегда ждала ответа сети (по замерам с iPhone
