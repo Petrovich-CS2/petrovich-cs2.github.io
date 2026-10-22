@@ -109,6 +109,7 @@ const IMG_SHELL = [
   './assets/maps/nuke-lower.webp',
   './assets/maps/overpass.webp',
   './assets/maps/ancient.webp',
+  './assets/maps/anubis.webp',
   './assets/ui/compact.webp',
   './assets/ui/lang-en.webp',
   './assets/ui/lang-ru.webp',
