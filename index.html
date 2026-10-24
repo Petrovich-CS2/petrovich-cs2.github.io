@@ -263,12 +263,11 @@ body{
   flex:1;
   padding:14px 16px 18px;
 }
-@keyframes screenFadeIn{
-  from{opacity:0; transform:translateY(5px);}
-  to{opacity:1; transform:translateY(0);}
-}
+/* Раньше экран при переключении вкладки плавно проявлялся (opacity 0→1). Пока у экрана opacity < 1,
+   он становится «Backdrop Root» (CSS Filter Effects 2), и backdrop-filter у карточек внутри перестаёт
+   размывать фон страницы — карточки на долю секунды выглядят прозрачными. Поэтому анимации у экрана нет. */
 .screen.switch-in{
-  animation:screenFadeIn .22s ease;
+  animation:none;
 }
 @media (prefers-reduced-motion: reduce){
   .screen.switch-in{animation:none;}
