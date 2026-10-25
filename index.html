@@ -1734,7 +1734,8 @@ body.text-size-sm .phrase-ru{font-size:clamp(10.5px, 2.93vw, 13.2px);}
 .icon-btn.playing{background:rgba(214,144,58,.4); animation:pulse 1s ease-in-out infinite;}
 .info-panel-name{font-family:var(--font-mono); font-weight:700; font-size:15px;}
 .info-panel-en{font-weight:500; font-size:12px; color:var(--text-faint);}
-.info-panel-alt{font-size:11.5px; color:var(--text-muted); margin:6px 0 2px;}
+.info-panel-alt{font-size:13px; color:var(--text-muted); margin:8px 0 4px; line-height:1.4;}
+.info-panel-alt-names{color:var(--t-orange); font-weight:600;}
 .info-panel-photo{
   width:100%;
   border-radius:10px;
@@ -3291,7 +3292,7 @@ const maps = {
     {n:"Камни", en:"Rocks", x:7.4,y:29.7,z:"n", d:"Камни у левого края карты, ориентир"},
     {n:"Нычка", en:"Hiding spot", x:18.2,y:35,z:"n", d:"Укромное место для засады"},
     {n:"Буст", en:"Boost", x:52.4,y:26.7,z:"n", d:"Место для подсадки тиммейта"},
-    {n:"Машина", en:"Car", x:19.8,y:30,z:"n", d:"Сломанный автомобиль на пути к точке B"},
+    {n:"Машина", en:"B Car", x:19.8,y:30,z:"n", d:"Сломанный автомобиль на пути к точке B"},
     {n:"Хаммер", en:"Fence", x:6.4,y:23.2,z:"b", alt:["Хамер"], d:"Скрытый угол у стены на пленте B"},
     {n:"Квадрат", en:"Squares", x:17,y:23,z:"b", d:"Комната с ящиками-квадратами"},
     {n:"Танцпол", en:"Dance floor", x:12,y:12.3,z:"b", d:"Открытая площадка перед точкой B"},
@@ -3304,12 +3305,12 @@ const maps = {
     {n:"Грибы", en:"Mushroom", x:35.8,y:15,z:"b", d:"Комната на подходе CT к точке B"},
     {n:"3", en:"Point 3", x:34.1,y:23.6,z:"n", d:"Пронумерованная позиция с исходной карты"},
     {n:"КТ-мид", en:"CT mid", x:45,y:27,z:"n", d:"Зона мида ближе к CT-спавну"},
-    {n:"ДД", en:"DD", x:45.6,y:35.7,z:"n", d:"Сокращение с исходной карты"},
+    {n:"ДД", en:"Mid Doors", x:45.6,y:35.7,z:"n", alt:["Двойные двери"], d:"Двойные двери в центре мида между КТ-мидом и Т-мидом"},
     {n:"Т-мид", en:"T mid", x:46,y:49.4,z:"n", d:"Зона мида ближе к T-спавну"},
     {n:"9", en:"Point 9", x:42,y:56.6,z:"n", d:"Пронумерованная позиция с исходной карты"},
     {n:"0", en:"Point 0", x:45,y:61.4,z:"n", alt:["Ноль"], d:"Пронумерованная позиция с исходной карты"},
     {n:"Парапет", en:"Catwalk", x:50.8,y:45.3,z:"a", alt:["Подиум"], d:"Узкий проход по верху от центра к Шорту"},
-    {n:"Зига (шорт)", en:"Short", x:60.1,y:39.4,z:"a", alt:["Зигзаг"], d:"Короткий путь от Парапета на точку A"},
+    {n:"Зига", en:"Short", x:60.1,y:39.4,z:"a", alt:["Шорт","Зигзаг"], d:"Короткий путь от Парапета на точку A"},
     {n:"Пальма", en:"Palm", x:49.8,y:59.5,z:"n", d:"Столб у входа на мид со стороны T-спавна"},
     {n:"8", en:"Point 8", x:60,y:62.2,z:"n", d:"Пронумерованная позиция с исходной карты"},
     {n:"Площадь", en:"Plaza", x:63.4,y:72.6,z:"n", d:"Открытая площадь рядом с Суицидом"},
@@ -3321,7 +3322,7 @@ const maps = {
     {n:"Лонг", en:"Long", x:85.1,y:37.4,z:"a", alt:["Длина"], d:"Вся прямая траектория от дверей до плента A"},
     {n:"Платформа", en:"Pit Platform", x:93,y:53,z:"a", d:"Возвышенность рядом с ямой"},
     {n:"Старт", en:"Start", x:86,y:44.5,z:"a", d:"Начало Лонга, откуда террористы входят"},
-    {n:"Реклама", en:"Billboard", x:94.1,y:25.6,z:"a", d:"Рекламный щит у правого края Лонга"},
+    {n:"Машина", en:"A Car", x:94.1,y:25.6,z:"a", alt:["Реклама","Билборд"], d:"Машина у правого края Лонга. Раньше на этом месте стоял рекламный щит"},
     {n:"Мост", en:"Bridge", x:63.1,y:19.7,z:"n", d:"Переход рядом с CT-спавном"},
     {n:"Гендальф", en:"Gandalf", x:69.3,y:10.7,z:"a", d:"Позиция на краю A-платформы"},
     {n:"Угол", en:"Corner", x:76.4,y:19.5,z:"a", d:"Угол рядом с точкой A"},
@@ -5678,7 +5679,7 @@ function selectPin(pinEl, pt){
       <span class="info-panel-name">${pt.n}${pt.en ? ` <span class="info-panel-en">[${pt.en}]</span>` : ''}</span>
       <span class="info-panel-tag" style="background:${tagColor}22; color:${tagColor}; border:1px solid ${tagColor}55;">${tagLabel}</span>
     </div>
-    ${pt.alt && pt.alt.length ? `<div class="info-panel-alt">Также называют: ${pt.alt.join(', ')}</div>` : ''}
+    ${pt.alt && pt.alt.length ? `<div class="info-panel-alt">Также называют: <span class="info-panel-alt-names">${pt.alt.join(', ')}</span></div>` : ''}
     ${pt.img ? `<img class="info-panel-photo" src="${pt.img}" alt="${pt.n}" loading="lazy">` : ''}
     <div class="info-panel-desc">${pt.d}</div>
   `;
