@@ -149,6 +149,8 @@ self.addEventListener('install', (event) => {
       // страница кладётся в кэш новой версии в обход HTTP-кэша браузера (cache:'reload'), чтобы сразу после
       // обновления воркера из кэша отдавалась именно свежая страница, а не копия до 10 минут давности
       fetch(INDEX_URL, { cache: 'reload' }).then((res) => { if (res && res.ok) return cache.put(INDEX_URL, res); }).catch(() => {}),
+      // данные карт — тоже в кэш новой версии в обход HTTP-кэша, чтобы вкладка «Карты» работала офлайн с первого запуска
+      fetch(new URL('./maps.json', self.registration.scope).href, { cache: 'reload' }).then((res) => { if (res && res.ok) return cache.put(new URL('./maps.json', self.registration.scope).href, res); }).catch(() => {}),
     ])).catch(() => {}),
     // картинки докачиваем по одной и только те, которых ещё нет в кэше картинок;
     // сбой одного файла не мешает остальным
@@ -238,7 +240,7 @@ self.addEventListener('fetch', (event) => {
   } catch(e){}
 
   const isHTML = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
-  const isChangelog = req.url.includes('changelog.json');
+  const isChangelog = req.url.includes('changelog.json') || /\/maps\.json(\?|$)/.test(req.url); // maps.json — данные карт, как и changelog.json: сеть в приоритете
 
   // кэш-сразу работает ТОЛЬКО для самой страницы приложения (/ и /index.html). Любые другие HTML-страницы
   // сайта (tools/…, 404.html, тестовые) воркер не трогает — их открывает браузер напрямую из сети,
