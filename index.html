@@ -6238,9 +6238,22 @@ if ('serviceWorker' in navigator){
     // ?appId=…&sdkVersion=… — на Android она именно такая), повторно регистрировать «чистый» sw.js
     // не нужно: каждая регистрация с другим адресом заставляет браузер заново устанавливать воркер,
     // и на каждую загрузку страницы получалось по две лишних установки (проверено в Chromium)
-    const registerPromise = navigator.serviceWorker.getRegistration().then((existing) => existing || navigator.serviceWorker.register('sw.js'));
+    // «пустая» регистрация (есть scope, но нет ни active, ни waiting, ни installing — на iOS в
+    // приложении с домашнего экрана так бывает после зависшей установки) сама не оживает:
+    // раньше её просто возвращали как есть, и update() падал с «newestWorker is null».
+    // Теперь такую регистрацию снимаем и регистрируем заново, каждый шаг пишем в журнал
+    const registerPromise = navigator.serviceWorker.getRegistration().then((existing) => {
+      if (existing && (existing.active || existing.waiting || existing.installing)) return existing;
+      if (existing){
+        window.__capturedErrors.push('точка B2: найдена пустая регистрация (нет воркеров) — снимаю и регистрирую заново');
+        return existing.unregister().catch((e) => { window.__capturedErrors.push('точка B2-FAIL: unregister() ' + e.message); })
+          .then(() => navigator.serviceWorker.register('sw.js'))
+          .then((r) => { window.__capturedErrors.push('точка B3: register() после снятия пустой регистрации завершился'); return r; });
+      }
+      return navigator.serviceWorker.register('sw.js');
+    });
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('register() не ответил за 5с (попытка ' + attempt + ')')), 5000);
+      setTimeout(() => reject(new Error('register() не ответил за 20с (попытка ' + attempt + ')')), 20000);
     });
     Promise.race([registerPromise, timeoutPromise]).then((reg) => {
       window.__capturedErrors.push('точка C: register() успешно разрешился, scope=' + reg.scope);
